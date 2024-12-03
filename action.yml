@@ -1,6 +1,6 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Tag with npm version'
+description: 'Tag the git repo with package.json version'
+author: 'YieldRay'
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
@@ -9,15 +9,17 @@ branding:
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
-    required: true
-    default: '1000'
+  origin:
+    description: 'Remote origin'
+    required: false
+    default: 'origin'
 
 # Define your outputs here.
 outputs:
-  time:
-    description: 'Your output description here'
+  version:
+    description: 'Version of package.json'
+  skip:
+    description: 'If tag already exists'
 
 runs:
   using: node20
