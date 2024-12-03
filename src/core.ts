@@ -2,20 +2,22 @@ import * as exec from '@actions/exec'
 import * as fs from 'node:fs/promises'
 
 export async function core(
-  origin: string,
+  origin = 'origin',
+  prefix = '',
   force = false
 ): Promise<Record<string, string | number | boolean>> {
   if (!(await isCwdGit())) throw new Error('Not in a git repository')
 
   const version = await getVersion()
+  const tag = prefix + version
   const remoteTags = (await cmd(`git ls-remote --tags "${origin}"`)).split(
     /\r|\n/
   )
-  if (!force && remoteTags.some(tag => tag.includes(`refs/tags/${version}`))) {
+  if (!force && remoteTags.some(tag => tag.includes(`refs/tags/${tag}`))) {
     return { skip: true }
   }
   await exec.exec(`git tag "${version}"`)
-  await exec.exec(`git push ${force ? '-f' : ''} "${origin}" "${version}"`)
+  await exec.exec(`git push ${force ? '-f' : ''} "${origin}" "${tag}"`)
   return { version, skip: false }
 }
 

@@ -25647,13 +25647,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.core = core;
 exports.isCwdGit = isCwdGit;
@@ -25661,16 +25671,17 @@ exports.getVersion = getVersion;
 exports.cmd = cmd;
 const exec = __importStar(__nccwpck_require__(5236));
 const fs = __importStar(__nccwpck_require__(1455));
-async function core(origin, force = false) {
+async function core(origin = 'origin', prefix = '', force = false) {
     if (!(await isCwdGit()))
         throw new Error('Not in a git repository');
     const version = await getVersion();
+    const tag = prefix + version;
     const remoteTags = (await cmd(`git ls-remote --tags "${origin}"`)).split(/\r|\n/);
-    if (!force && remoteTags.some(tag => tag.includes(`refs/tags/${version}`))) {
+    if (!force && remoteTags.some(tag => tag.includes(`refs/tags/${tag}`))) {
         return { skip: true };
     }
     await exec.exec(`git tag "${version}"`);
-    await exec.exec(`git push ${force ? '-f' : ''} "${origin}" "${version}"`);
+    await exec.exec(`git push ${force ? '-f' : ''} "${origin}" "${tag}"`);
     return { version, skip: false };
 }
 async function isCwdGit() {
@@ -25714,13 +25725,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
@@ -25732,8 +25753,9 @@ const core_1 = __nccwpck_require__(828);
 async function run() {
     try {
         const origin = core.getInput('origin');
+        const prefix = core.getInput('prefix');
         const force = core.getInput('force') === 'true';
-        const outputs = await (0, core_1.core)(origin, force);
+        const outputs = await (0, core_1.core)(origin, prefix, force);
         // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
         core.debug(`origin is ${origin}`);
         // Set outputs for other workflow steps to use

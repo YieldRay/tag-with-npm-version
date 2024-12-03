@@ -8,9 +8,10 @@ import { core as coreFn } from './core'
 export async function run(): Promise<void> {
   try {
     const origin = core.getInput('origin')
+    const prefix = core.getInput('prefix')
     const force = core.getInput('force') === 'true'
 
-    const outputs = await coreFn(origin, force)
+    const outputs = await coreFn(origin, prefix, force)
 
     // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
     core.debug(`origin is ${origin}`)

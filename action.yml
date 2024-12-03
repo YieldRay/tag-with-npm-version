@@ -13,6 +13,10 @@ inputs:
     description: 'Remote origin'
     required: false
     default: 'origin'
+  prefix:
+    description: 'Prefix string of the tag'
+    required: false
+    default: ''
   force:
     description: 'Force push'
     required: false
