@@ -25626,6 +25626,73 @@ module.exports = {
 
 /***/ }),
 
+/***/ 828:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.core = core;
+exports.isCwdGit = isCwdGit;
+exports.getVersion = getVersion;
+exports.cmd = cmd;
+const exec = __importStar(__nccwpck_require__(5236));
+const fs = __importStar(__nccwpck_require__(1455));
+async function core(origin, force = false) {
+    if (!(await isCwdGit()))
+        throw new Error('Not in a git repository');
+    const version = await getVersion();
+    const remoteTags = (await cmd(`git ls-remote --tags "${origin}"`)).split(/\r|\n/);
+    if (!force && remoteTags.some(tag => tag.includes(`refs/tags/${version}`))) {
+        return { skip: true };
+    }
+    await exec.exec(`git tag "${version}"`);
+    await exec.exec(`git push ${force ? '-f' : ''} "${origin}" "${version}"`);
+    return { version, skip: false };
+}
+async function isCwdGit() {
+    const bool = await cmd('git rev-parse --is-inside-work-tree');
+    return bool === 'true';
+}
+async function getVersion() {
+    const file = await fs.readFile('package.json', 'utf-8');
+    const pkg = JSON.parse(file);
+    return pkg.version;
+}
+async function cmd(commandLine, args) {
+    const { exitCode, stdout, stderr } = await exec.getExecOutput(commandLine, args);
+    if (exitCode) {
+        throw new Error(`Failed to execute \`${commandLine}\`, stderr:\n${stderr}`);
+    }
+    return stdout.trim();
+}
+
+
+/***/ }),
+
 /***/ 1730:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -25657,52 +25724,28 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
-const wait_1 = __nccwpck_require__(910);
+const core_1 = __nccwpck_require__(828);
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
  */
 async function run() {
     try {
-        const ms = core.getInput('milliseconds');
+        const origin = core.getInput('origin');
+        const force = core.getInput('force') === 'true';
+        const outputs = await (0, core_1.core)(origin, force);
         // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-        core.debug(`Waiting ${ms} milliseconds ...`);
-        // Log the current timestamp, wait, then log the new timestamp
-        core.debug(new Date().toTimeString());
-        await (0, wait_1.wait)(parseInt(ms, 10));
-        core.debug(new Date().toTimeString());
+        core.debug(`origin is ${origin}`);
         // Set outputs for other workflow steps to use
-        core.setOutput('time', new Date().toTimeString());
+        for (const [name, value] of Object.entries(outputs)) {
+            core.setOutput(name, value);
+        }
     }
     catch (error) {
         // Fail the workflow run if an error occurs
         if (error instanceof Error)
             core.setFailed(error.message);
     }
-}
-
-
-/***/ }),
-
-/***/ 910:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.wait = wait;
-/**
- * Wait for a number of milliseconds.
- * @param milliseconds The number of milliseconds to wait.
- * @returns {Promise<string>} Resolves with 'done!' after the wait is over.
- */
-async function wait(milliseconds) {
-    return new Promise(resolve => {
-        if (isNaN(milliseconds)) {
-            throw new Error('milliseconds not a number');
-        }
-        setTimeout(() => resolve('done!'), milliseconds);
-    });
 }
 
 
@@ -25817,6 +25860,14 @@ module.exports = require("net");
 
 "use strict";
 module.exports = require("node:events");
+
+/***/ }),
+
+/***/ 1455:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:fs/promises");
 
 /***/ }),
 
