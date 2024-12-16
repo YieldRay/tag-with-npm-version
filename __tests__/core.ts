@@ -2,7 +2,7 @@
  * Unit tests for src/core.ts
  */
 
-import { getVersion, isCwdGit, cmd } from '../src/core'
+import { cmd, getVersion, isCwdGit, lsRemoteTags } from '../src/core'
 import { expect } from '@jest/globals'
 
 describe('core', () => {
@@ -12,6 +12,11 @@ describe('core', () => {
 
   it('isCwdGit', async () => {
     await expect(isCwdGit()).resolves.toBe(true)
+  })
+
+  it('lsRemoteTags', async () => {
+    const hash2tag = await lsRemoteTags()
+    expect(hash2tag.size).toBeGreaterThan(0)
   })
 
   it('cmd', async () => {

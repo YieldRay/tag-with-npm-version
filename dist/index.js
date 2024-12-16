@@ -25666,23 +25666,36 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.core = core;
+exports.lsRemoteTags = lsRemoteTags;
 exports.isCwdGit = isCwdGit;
 exports.getVersion = getVersion;
 exports.cmd = cmd;
-const exec = __importStar(__nccwpck_require__(5236));
+const exec_1 = __nccwpck_require__(5236);
 const fs = __importStar(__nccwpck_require__(1455));
+/* istanbul ignore next */
 async function core(origin = 'origin', prefix = '', force = false) {
     if (!(await isCwdGit()))
         throw new Error('Not in a git repository');
     const version = await getVersion();
     const tag = prefix + version;
-    const remoteTags = (await cmd(`git ls-remote --tags "${origin}"`)).split(/\r|\n/);
-    if (!force && remoteTags.some(tag => tag.includes(`refs/tags/${tag}`))) {
+    const remoteTags = Array.from((await lsRemoteTags(origin)).keys());
+    if (!force && remoteTags.includes(`refs/tags/${tag}`)) {
         return { skip: true };
     }
-    await exec.exec(`git tag "${tag}"`);
-    await exec.exec(`git push ${force ? '-f' : ''} "${origin}" "${tag}"`);
+    await (0, exec_1.exec)(`git tag "${tag}"`);
+    await (0, exec_1.exec)(`git push ${force ? '-f' : ''} "${origin}" "${tag}"`);
     return { version, skip: false };
+}
+async function lsRemoteTags(origin = 'origin') {
+    const output = await cmd(`git ls-remote --tags "${origin}"`);
+    const map = new Map();
+    for (const line of output.trim().split(/\r|\n/)) {
+        const [hash, ref] = line.trim().split(/\s+/);
+        if (!ref)
+            continue;
+        map.set(ref, hash);
+    }
+    return map;
 }
 async function isCwdGit() {
     const bool = await cmd('git rev-parse --is-inside-work-tree');
@@ -25694,7 +25707,7 @@ async function getVersion() {
     return pkg.version;
 }
 async function cmd(commandLine, args) {
-    const { exitCode, stdout, stderr } = await exec.getExecOutput(commandLine, args);
+    const { exitCode, stdout, stderr } = await (0, exec_1.getExecOutput)(commandLine, args);
     if (exitCode) {
         throw new Error(`Failed to execute \`${commandLine}\`, stderr:\n${stderr}`);
     }
