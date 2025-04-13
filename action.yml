@@ -20,7 +20,11 @@ inputs:
   force:
     description: 'Force push'
     required: false
-    default: false
+    default: 'false'
+  dir:
+    description: 'Directory of the package.json'
+    required: false
+    default: '.'
 
 # Define your outputs here.
 outputs:

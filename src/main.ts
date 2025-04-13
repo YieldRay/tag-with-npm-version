@@ -11,7 +11,7 @@ export async function run(): Promise<void> {
     const prefix = core.getInput('prefix')
     const force = core.getInput('force') === 'true'
 
-    const outputs = await coreFn(origin, prefix, force)
+    const outputs = await coreFn({ origin, prefix, force })
 
     // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
     core.debug(`origin is ${origin}`)

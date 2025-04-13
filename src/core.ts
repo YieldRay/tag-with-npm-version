@@ -1,15 +1,22 @@
 import { exec, getExecOutput } from '@actions/exec'
 import * as fs from 'node:fs/promises'
+import * as path from 'node:path/posix'
+
+export interface Options {
+  origin?: string
+  prefix?: string
+  force?: boolean
+  dir?: string
+}
 
 /* istanbul ignore next */
 export async function core(
-  origin = 'origin',
-  prefix = '',
-  force = false
+  options?: Options
 ): Promise<Record<string, string | number | boolean>> {
   if (!(await isCwdGit())) throw new Error('Not in a git repository')
+  const { origin = 'origin', prefix = '', force = false, dir } = options || {}
 
-  const version = await getVersion()
+  const { version } = await getPackageJSON(dir)
   const tag = prefix + version
   const remoteTags = Array.from((await lsRemoteTags(origin)).keys())
   if (!force && remoteTags.includes(`refs/tags/${tag}`)) {
@@ -38,10 +45,15 @@ export async function isCwdGit(): Promise<boolean> {
   return bool === 'true'
 }
 
-export async function getVersion(): Promise<string> {
-  const file = await fs.readFile('package.json', 'utf-8')
-  const pkg = JSON.parse(file) as PackageJSON
-  return pkg.version
+export async function getPackageJSON(dir = '.'): Promise<PackageJSON> {
+  const filepath = path.join(dir, 'package.json')
+  try {
+    const file = await fs.readFile(filepath, 'utf-8')
+    const pkg = JSON.parse(file) as PackageJSON
+    return pkg
+  } catch {
+    throw new Error(`Failed to read package.json at ${filepath}`)
+  }
 }
 
 export async function cmd(

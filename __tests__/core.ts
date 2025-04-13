@@ -2,12 +2,14 @@
  * Unit tests for src/core.ts
  */
 
-import { cmd, getVersion, isCwdGit, lsRemoteTags } from '../src/core'
+import { cmd, getPackageJSON, isCwdGit, lsRemoteTags } from '../src/core'
 import { expect } from '@jest/globals'
 
 describe('core', () => {
-  it('getVersion', async () => {
-    await expect(getVersion()).resolves.toContain('')
+  it('getPackageJSON', async () => {
+    await expect(getPackageJSON().then(pkg => pkg.version)).resolves.toContain(
+      ''
+    )
   })
 
   it('isCwdGit', async () => {

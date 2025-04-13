@@ -8803,7 +8803,7 @@ module.exports = {
 
 
 const { parseSetCookie } = __nccwpck_require__(8915)
-const { stringify, getHeadersList } = __nccwpck_require__(3834)
+const { stringify } = __nccwpck_require__(3834)
 const { webidl } = __nccwpck_require__(4222)
 const { Headers } = __nccwpck_require__(6349)
 
@@ -8879,14 +8879,13 @@ function getSetCookies (headers) {
 
   webidl.brandCheck(headers, Headers, { strict: false })
 
-  const cookies = getHeadersList(headers).cookies
+  const cookies = headers.getSetCookie()
 
   if (!cookies) {
     return []
   }
 
-  // In older versions of undici, cookies is a list of name:value.
-  return cookies.map((pair) => parseSetCookie(Array.isArray(pair) ? pair[1] : pair))
+  return cookies.map((pair) => parseSetCookie(pair))
 }
 
 /**
@@ -9314,14 +9313,15 @@ module.exports = {
 /***/ }),
 
 /***/ 3834:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ ((module) => {
 
 "use strict";
 
 
-const assert = __nccwpck_require__(2613)
-const { kHeadersList } = __nccwpck_require__(6443)
-
+/**
+ * @param {string} value
+ * @returns {boolean}
+ */
 function isCTLExcludingHtab (value) {
   if (value.length === 0) {
     return false
@@ -9582,31 +9582,13 @@ function stringify (cookie) {
   return out.join('; ')
 }
 
-let kHeadersListNode
-
-function getHeadersList (headers) {
-  if (headers[kHeadersList]) {
-    return headers[kHeadersList]
-  }
-
-  if (!kHeadersListNode) {
-    kHeadersListNode = Object.getOwnPropertySymbols(headers).find(
-      (symbol) => symbol.description === 'headers list'
-    )
-
-    assert(kHeadersListNode, 'Headers cannot be parsed')
-  }
-
-  const headersList = headers[kHeadersListNode]
-  assert(headersList)
-
-  return headersList
-}
-
 module.exports = {
   isCTLExcludingHtab,
-  stringify,
-  getHeadersList
+  validateCookieName,
+  validateCookiePath,
+  validateCookieValue,
+  toIMFDate,
+  stringify
 }
 
 
@@ -13610,6 +13592,7 @@ const {
   isValidHeaderName,
   isValidHeaderValue
 } = __nccwpck_require__(5523)
+const util = __nccwpck_require__(9023)
 const { webidl } = __nccwpck_require__(4222)
 const assert = __nccwpck_require__(2613)
 
@@ -14163,6 +14146,9 @@ Object.defineProperties(Headers.prototype, {
   [Symbol.toStringTag]: {
     value: 'Headers',
     configurable: true
+  },
+  [util.inspect.custom]: {
+    enumerable: false
   }
 })
 
@@ -23339,6 +23325,20 @@ class Pool extends PoolBase {
       ? { ...options.interceptors }
       : undefined
     this[kFactory] = factory
+
+    this.on('connectionError', (origin, targets, error) => {
+      // If a connection error occurs, we remove the client from the pool,
+      // and emit a connectionError event. They will not be re-used.
+      // Fixes https://github.com/nodejs/undici/issues/3895
+      for (const target of targets) {
+        // Do not use kRemoveClient here, as it will close the client,
+        // but the client cannot be closed in this state.
+        const idx = this[kClients].indexOf(target)
+        if (idx !== -1) {
+          this[kClients].splice(idx, 1)
+        }
+      }
+    })
   }
 
   [kGetDispatcher] () {
@@ -25685,15 +25685,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.core = core;
 exports.lsRemoteTags = lsRemoteTags;
 exports.isCwdGit = isCwdGit;
-exports.getVersion = getVersion;
+exports.getPackageJSON = getPackageJSON;
 exports.cmd = cmd;
 const exec_1 = __nccwpck_require__(5236);
 const fs = __importStar(__nccwpck_require__(1455));
+const path = __importStar(__nccwpck_require__(3916));
 /* istanbul ignore next */
-async function core(origin = 'origin', prefix = '', force = false) {
+async function core(options) {
     if (!(await isCwdGit()))
         throw new Error('Not in a git repository');
-    const version = await getVersion();
+    const { origin = 'origin', prefix = '', force = false, dir } = options || {};
+    const { version } = await getPackageJSON(dir);
     const tag = prefix + version;
     const remoteTags = Array.from((await lsRemoteTags(origin)).keys());
     if (!force && remoteTags.includes(`refs/tags/${tag}`)) {
@@ -25718,10 +25720,16 @@ async function isCwdGit() {
     const bool = await cmd('git rev-parse --is-inside-work-tree');
     return bool === 'true';
 }
-async function getVersion() {
-    const file = await fs.readFile('package.json', 'utf-8');
-    const pkg = JSON.parse(file);
-    return pkg.version;
+async function getPackageJSON(dir = '.') {
+    const filepath = path.join(dir, 'package.json');
+    try {
+        const file = await fs.readFile(filepath, 'utf-8');
+        const pkg = JSON.parse(file);
+        return pkg;
+    }
+    catch {
+        throw new Error(`Failed to read package.json at ${filepath}`);
+    }
 }
 async function cmd(commandLine, args) {
     const { exitCode, stdout, stderr } = await (0, exec_1.getExecOutput)(commandLine, args);
@@ -25785,7 +25793,7 @@ async function run() {
         const origin = core.getInput('origin');
         const prefix = core.getInput('prefix');
         const force = core.getInput('force') === 'true';
-        const outputs = await (0, core_1.core)(origin, prefix, force);
+        const outputs = await (0, core_1.core)({ origin, prefix, force });
         // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
         core.debug(`origin is ${origin}`);
         // Set outputs for other workflow steps to use
@@ -25928,6 +25936,14 @@ module.exports = require("node:events");
 
 "use strict";
 module.exports = require("node:fs/promises");
+
+/***/ }),
+
+/***/ 3916:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:path/posix");
 
 /***/ }),
 
