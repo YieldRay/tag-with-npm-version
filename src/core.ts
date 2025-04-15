@@ -12,7 +12,7 @@ export interface Options {
 /* istanbul ignore next */
 export async function core(
   options?: Options
-): Promise<Record<string, string | number | boolean>> {
+): Promise<{ skip: true } | { version: string; skip: false }> {
   if (!(await isCwdGit())) throw new Error('Not in a git repository')
   const { origin = 'origin', prefix = '', force = false, dir } = options || {}
 
