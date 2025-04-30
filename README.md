@@ -16,7 +16,7 @@ version
 ## Usage
 
 ```yaml
-name: tag-with-npm-version
+name: Tag with NPM Version
 
 on:
   workflow_dispatch:
@@ -25,6 +25,9 @@ on:
       - main
     paths:
       - package.json
+
+permissions:
+  contents: write
 
 jobs:
   tag-with-npm-version:
@@ -46,6 +49,61 @@ jobs:
         run: echo "${{ steps.tag-with-npm-version.outputs.version }}"
 ```
 
-After tagging, you may also want to release. Checkout:  
-<https://github.com/ncipollo/release-action>  
-<https://github.com/softprops/action-gh-release>
+## Trigger other workflows
+
+When you use the repository's `GITHUB_TOKEN` to perform tasks, events triggered
+by the `GITHUB_TOKEN`
+[**will not create a new workflow run**](https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow).
+
+Since there are use cases where you might want to do something after tagging,
+for example, release using these actions:
+[ncipollo/release-action](https://github.com/ncipollo/release-action)
+[softprops/action-gh-release](https://github.com/softprops/action-gh-release)
+
+You can refer to this discussion for a workaround:
+<https://github.com/orgs/community/discussions/27028>
+
+---
+
+Note that this actions will output a `skip` variable, so checking this variable
+can also serve as a workaround.
+
+```yaml
+- name: Tag
+  id: tag
+  uses: yieldray/tag-with-npm-version@main
+  with:
+    prefix: v
+    force: true
+
+- name: Print version
+  if: steps.tag.outputs.skip == 'false'
+  run: echo "${{ steps.tag.outputs.version }}"
+```
+
+Or
+[reuse](https://docs.github.com/en/actions/sharing-automations/reusing-workflows)
+[jobs](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/using-jobs-in-a-workflow):
+
+```yaml
+jobs:
+  attempt-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      - skip: ${{ steps.tag.outputs.skip }}
+      - version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Tag
+        id: tag
+        uses: yieldray/tag-with-npm-version@main
+        with:
+          prefix: v
+          force: true
+
+  after-tag:
+    needs: attempt-tag
+    runs-on: ubuntu-latest
+    if: needs.attempt-tag.outputs.skip == 'false'
+    steps:
+      - run: echo "${{ needs.attempt-tag.outputs.version }}"
+```
