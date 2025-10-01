@@ -16,9 +16,9 @@ describe('core', () => {
   })
 
   it('getPackageJSON', async () => {
-    await expect(getPackageJSON().then(pkg => pkg.version)).resolves.toContain(
-      ''
-    )
+    await expect(
+      getPackageJSON().then((pkg) => pkg.version)
+    ).resolves.toContain('')
   })
 
   it('cmd', async () => {

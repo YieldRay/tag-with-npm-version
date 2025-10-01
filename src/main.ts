@@ -1,6 +1,6 @@
 /* istanbul ignore file */
 import * as core from '@actions/core'
-import { core as coreFn } from './core'
+import { core as coreFn } from './core.js'
 
 /**
  * The main function for the action.
